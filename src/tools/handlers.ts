@@ -255,6 +255,7 @@ async function dispatch(
           cc_emails: args.cc_emails as string | undefined,
           bcc_emails: args.bcc_emails as string | undefined,
           to_emails: args.to_emails as string | undefined,
+          attachment_urls: args.attachment_urls as string[] | undefined,
         },
         acct(args),
       );

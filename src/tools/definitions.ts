@@ -272,7 +272,7 @@ export const tools: Tool[] = [
   {
     name: 'send_message',
     description:
-      'Send a message in a conversation. Can be a regular reply or a private note (visible only to agents). For email inboxes, cc_emails / bcc_emails / to_emails set recipients on this outbound message.',
+      'Send a message in a conversation. Can be a regular reply or a private note (visible only to agents). For email inboxes, cc_emails / bcc_emails / to_emails set recipients on this outbound message. To include files or images, pass attachment_urls — each URL is fetched server-side and uploaded to Chatwoot as a message attachment.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -301,6 +301,12 @@ export const tools: Tool[] = [
           type: 'string',
           description:
             'Comma-separated list of To recipients for this message (email inboxes only). Overrides the conversation default recipient.',
+        },
+        attachment_urls: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Public URLs (https://) of files to attach — images, PDFs, or any file type supported by the inbox. Each URL is downloaded by the MCP server and uploaded to Chatwoot as a message attachment. 25 MB per file max; use publicly reachable URLs (e.g., signed S3 links, Drive share URLs, image-generator outputs).',
         },
         ...accountIdProperty,
       },

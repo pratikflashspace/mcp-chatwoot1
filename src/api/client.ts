@@ -1,6 +1,29 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import FormData from 'form-data';
 import { ChatwootConfig } from '../utils/config.js';
 import { logger } from '../utils/logger.js';
+
+const ATTACHMENT_FETCH_TIMEOUT_MS = 60000;
+const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
+
+async function fetchAttachment(url: string): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
+  const res = await axios.get<ArrayBuffer>(url, {
+    responseType: 'arraybuffer',
+    timeout: ATTACHMENT_FETCH_TIMEOUT_MS,
+    maxContentLength: ATTACHMENT_MAX_BYTES,
+    maxBodyLength: ATTACHMENT_MAX_BYTES,
+  });
+  const buffer = Buffer.from(res.data);
+  const contentType = (res.headers['content-type'] as string | undefined)?.split(';')[0]?.trim() || 'application/octet-stream';
+  let filename: string;
+  try {
+    const pathname = new URL(url).pathname;
+    filename = decodeURIComponent(pathname.split('/').filter(Boolean).pop() || '') || 'attachment';
+  } catch {
+    filename = 'attachment';
+  }
+  return { buffer, filename, contentType };
+}
 
 export class ChatwootClient {
   private http: AxiosInstance | null;
@@ -283,19 +306,47 @@ export class ChatwootClient {
       cc_emails?: string;
       bcc_emails?: string;
       to_emails?: string;
+      attachment_urls?: string[];
     } = {},
     accountId?: number,
   ): Promise<unknown> {
     const http = this.forAccount(accountId);
-    const res = await http.post(`/conversations/${conversationId}/messages`, {
-      content,
-      message_type: options.message_type || 'outgoing',
-      private: options.private || false,
-      content_type: options.content_type || 'text',
-      content_attributes: options.content_attributes,
-      cc_emails: options.cc_emails,
-      bcc_emails: options.bcc_emails,
-      to_emails: options.to_emails,
+    const attachmentUrls = options.attachment_urls?.filter((u) => typeof u === 'string' && u.length > 0) || [];
+
+    if (attachmentUrls.length === 0) {
+      const res = await http.post(`/conversations/${conversationId}/messages`, {
+        content,
+        message_type: options.message_type || 'outgoing',
+        private: options.private || false,
+        content_type: options.content_type || 'text',
+        content_attributes: options.content_attributes,
+        cc_emails: options.cc_emails,
+        bcc_emails: options.bcc_emails,
+        to_emails: options.to_emails,
+      });
+      return res.data;
+    }
+
+    const attachments = await Promise.all(attachmentUrls.map(fetchAttachment));
+    const form = new FormData();
+    form.append('content', content);
+    form.append('message_type', options.message_type || 'outgoing');
+    form.append('private', String(options.private || false));
+    form.append('content_type', options.content_type || 'text');
+    if (options.cc_emails !== undefined) form.append('cc_emails', options.cc_emails);
+    if (options.bcc_emails !== undefined) form.append('bcc_emails', options.bcc_emails);
+    if (options.to_emails !== undefined) form.append('to_emails', options.to_emails);
+    for (const att of attachments) {
+      form.append('attachments[]', att.buffer, {
+        filename: att.filename,
+        contentType: att.contentType,
+      });
+    }
+
+    const res = await http.post(`/conversations/${conversationId}/messages`, form, {
+      headers: form.getHeaders(),
+      maxContentLength: ATTACHMENT_MAX_BYTES * (attachments.length + 1),
+      maxBodyLength: ATTACHMENT_MAX_BYTES * (attachments.length + 1),
     });
     return res.data;
   }
