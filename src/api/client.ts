@@ -191,11 +191,17 @@ export class ChatwootClient {
     source_id?: string;
     inbox_id: number;
     contact_id?: number;
-    message?: { content: string };
+    message?: {
+      content: string;
+      cc_emails?: string;
+      bcc_emails?: string;
+      to_emails?: string;
+    };
     status?: string;
     assignee_id?: number;
     team_id?: number;
     custom_attributes?: Record<string, unknown>;
+    additional_attributes?: Record<string, unknown>;
   }, accountId?: number): Promise<unknown> {
     const http = this.forAccount(accountId);
     const res = await http.post('/conversations', data);
@@ -274,6 +280,9 @@ export class ChatwootClient {
       private?: boolean;
       content_type?: string;
       content_attributes?: Record<string, unknown>;
+      cc_emails?: string;
+      bcc_emails?: string;
+      to_emails?: string;
     } = {},
     accountId?: number,
   ): Promise<unknown> {
@@ -284,6 +293,9 @@ export class ChatwootClient {
       private: options.private || false,
       content_type: options.content_type || 'text',
       content_attributes: options.content_attributes,
+      cc_emails: options.cc_emails,
+      bcc_emails: options.bcc_emails,
+      to_emails: options.to_emails,
     });
     return res.data;
   }

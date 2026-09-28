@@ -171,13 +171,33 @@ async function dispatch(
     }
 
     case 'create_conversation': {
+      const messageContent = args.message as string | undefined;
+      const ccEmails = args.cc_emails as string | undefined;
+      const bccEmails = args.bcc_emails as string | undefined;
+      const toEmails = args.to_emails as string | undefined;
+      const subject = args.subject as string | undefined;
+
+      const message = messageContent !== undefined
+        ? {
+            content: messageContent,
+            ...(ccEmails !== undefined ? { cc_emails: ccEmails } : {}),
+            ...(bccEmails !== undefined ? { bcc_emails: bccEmails } : {}),
+            ...(toEmails !== undefined ? { to_emails: toEmails } : {}),
+          }
+        : undefined;
+
+      const additionalAttributes = subject !== undefined
+        ? { mail_subject: subject }
+        : undefined;
+
       const data = await client.createConversation({
         inbox_id: args.inbox_id as number,
         contact_id: args.contact_id as number | undefined,
-        message: args.message ? { content: args.message as string } : undefined,
+        message,
         status: args.status as string | undefined,
         assignee_id: args.assignee_id as number | undefined,
         team_id: args.team_id as number | undefined,
+        ...(additionalAttributes ? { additional_attributes: additionalAttributes } : {}),
       }, acct(args));
       return jsonResult(data);
     }
@@ -232,6 +252,9 @@ async function dispatch(
         {
           private: args.private as boolean | undefined,
           message_type: args.message_type as 'outgoing' | 'incoming' | undefined,
+          cc_emails: args.cc_emails as string | undefined,
+          bcc_emails: args.bcc_emails as string | undefined,
+          to_emails: args.to_emails as string | undefined,
         },
         acct(args),
       );

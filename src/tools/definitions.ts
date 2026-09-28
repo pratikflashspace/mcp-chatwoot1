@@ -162,13 +162,33 @@ export const tools: Tool[] = [
   {
     name: 'create_conversation',
     description:
-      'Create a new conversation. Requires an inbox_id. Optionally link to a contact and send an initial message.',
+      'Create a new conversation. Requires an inbox_id. Optionally link to a contact and send an initial message. For email inboxes, subject sets the thread subject (create-only; cannot be updated later via Chatwoot API), and cc_emails / bcc_emails / to_emails set recipients on the initial message.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         inbox_id: { type: 'number', description: 'Inbox ID for the conversation' },
         contact_id: { type: 'number', description: 'Contact ID to associate' },
         message: { type: 'string', description: 'Initial message content' },
+        subject: {
+          type: 'string',
+          description:
+            'Email subject line (email inboxes only). Set at conversation creation; the Chatwoot API does not support updating the subject afterwards.',
+        },
+        cc_emails: {
+          type: 'string',
+          description:
+            'Comma-separated list of CC recipients for the initial email message (email inboxes only).',
+        },
+        bcc_emails: {
+          type: 'string',
+          description:
+            'Comma-separated list of BCC recipients for the initial email message (email inboxes only).',
+        },
+        to_emails: {
+          type: 'string',
+          description:
+            'Comma-separated list of To recipients for the initial email message (email inboxes only). Overrides the contact-derived default recipient.',
+        },
         status: {
           type: 'string',
           description: 'Initial status',
@@ -252,7 +272,7 @@ export const tools: Tool[] = [
   {
     name: 'send_message',
     description:
-      'Send a message in a conversation. Can be a regular reply or a private note (visible only to agents).',
+      'Send a message in a conversation. Can be a regular reply or a private note (visible only to agents). For email inboxes, cc_emails / bcc_emails / to_emails set recipients on this outbound message.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -266,6 +286,21 @@ export const tools: Tool[] = [
           type: 'string',
           description: 'Message type',
           enum: ['outgoing', 'incoming'],
+        },
+        cc_emails: {
+          type: 'string',
+          description:
+            'Comma-separated list of CC recipients for this message (email inboxes only).',
+        },
+        bcc_emails: {
+          type: 'string',
+          description:
+            'Comma-separated list of BCC recipients for this message (email inboxes only).',
+        },
+        to_emails: {
+          type: 'string',
+          description:
+            'Comma-separated list of To recipients for this message (email inboxes only). Overrides the conversation default recipient.',
         },
         ...accountIdProperty,
       },
